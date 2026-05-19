@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Encontro de Dois Moveis - Prof. Ojeda</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            display: flex;
+            color: #333;
+        }
+        #painel-controle {
+            width: 320px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+        #area-simulacao {
+            flex-grow: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .bloco-movel {
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .movel1 { border: 2px solid #0056b3; background-color: #f8faff; }
+        .movel2 { border: 2px solid #cc0000; background-color: #fff8f8; }
+        
+        .controle-grupo {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        select {
+            width: 100%;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        
+        canvas {
+            border: 2px solid #444;
+            background-color: #ffffff;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .container-graficos {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            gap: 15px;
+        }
+        .bloco-grafico {
+            flex: 1;
+        }
+        .escondido { display: none !important; }
+        
+        #container-encontro {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #e2f0d9;
+            border: 1px solid #b5d59c;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="painel-controle">
+    <div class="bloco-movel movel1">
+        <h3 style="margin-top:0; color:#0056b3;">Móvel 1 (Azul)</h3>
+        <select id="tipo1" onchange="alternarControles()">
+            <option value="MU">MU</option>
+            <option value="MUV">MUV</option>
+        </select>
+        
+        <div class="controle-grupo">
+            <label>S₀: <span id="v_s01">0</span> m</label>
+            <input type="range" id="s01" min="0" max="200" value="0" oninput="atualizarValores()">
+        </div>
+        <div class="controle-grupo">
+            <label>V₀: <span id="v_v01">15</span> m/s</label>
+            <input type="range" id="v01" min="-40" max="40" value="15" oninput="atualizarValores()">
+        </div>
+        <div class="controle-grupo escondido" id="grupo-a1">
+            <label>a: <span id="v_a1">0</span> m/s²</label>
+            <input type="range" id="a1" min="-10" max="10" step="0.5" value="0" oninput="atualizarValores()">
+        </div>
+    </div>
+
+    <div class="bloco-movel movel2">
+        <h3 style="margin-top:0; color:#cc0000;">Móvel 2 (Vermelho)</h3>
+        <select id="tipo2" onchange="alternarControles()">
+            <option value="MU">MU</option>
+            <option value="MUV" selected>MUV</option>
+        </select>
+        
+        <div class="controle-grupo">
+            <label>S₀: <span id="v_s02">160</span> m</label>
+            <input type="range" id="s02" min="0" max="200" value="160" oninput="atualizarValores()">
+        </div>
+        <div class="controle-grupo">
+            <label>V₀: <span id="v_v02">-10</span> m/s</label>
+            <input type="range" id="v02" min="-40" max="40" value="-10" oninput="atualizarValores()">
+        </div>
+        <div class="controle-grupo" id="grupo-a2">
+            <label>a: <span id="v_a2">2</span> m/s²</label>
+            <input type="range" id="a2" min="-10" max="10" step="0.5" value="2" oninput="atualizarValores()">
+        </div>
+    </div>
+
+    <div class="controle-grupo">
+        <label>Tempo Máx: <span id="v_tmax">30</span> s</label>
+        <input type="range" id="tmax" min="5" max="60" value="30" oninput="atualizarValores()">
+    </div>
+
+    <button id="btn-animar" onclick="iniciarAnimacao()">▶ Iniciar Animação</button>
+    <div id="container-encontro">Encontro: ---</div>
+</div>
+
+<div id="area-simulacao">
+    <h1 style="margin-top:0; font-size: 24px;">Laboratório Prof. Ojeda</h1>
+    
+    <canvas id="canvasSimulacao" width="750" height="180"></canvas>
+    
+    <p style="font-size: 20px; font-weight: bold; margin: 10px 0;">
+        Tempo: <span id="txt-tempo" style="color: red;">0.00</span>s
+    </p>
+
+    <div class="container-graficos">
+        <div class="bloco-grafico">
+            <span style="font-weight: bold; font-size: 14px;">POSIÇÃO (S × t)</span><br>
+            <canvas id="canvasPosicao" width="360" height="200"></canvas>
+        </div>
+        <div class="bloco-grafico">
+            <span style="font-weight: bold; font-size: 14px;">VELOCIDADE (V × t)</span><br>
+            <canvas id="canvasVelocidade" width="360" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById("canvasSimulacao");
+    const ctx = canvas.getContext("2d");
+
+    const canvasS = document.getElementById("canvasPosicao");
+    const ctxS = canvasS.getContext("2d");
+
+    const canvasV = document.getElementById("canvasVelocidade");
+    const ctxV = canvasV.getContext("2d");
+
+    let tempoAtual = 0;
+    let tMax = 30;
+    let animacaoId = null;
+    let rodando = false;
+    let temposEncontroGlobais = []; // Guarda os tempos calculados para plotar no gráfico
+
+    function atualizarValores() {
+        document.getElementById("v_s01").innerText = document.getElementById("s01").value;
+        document.getElementById("v_v01").innerText = document.getElementById("v01").value;
+        document.getElementById("v_a1").innerText = document.getElementById("a1").value;
+
+        document.getElementById("v_s02").innerText = document.getElementById("s02").value;
+        document.getElementById("v_v02").innerText = document.getElementById("v02").value;
+        document.getElementById("v_a2").innerText = document.getElementById("a2").value;
+        
+        tMax = parseFloat(document.getElementById("tmax").value);
+        document.getElementById("v_tmax").innerText = tMax;
+
+        verificarEncontroTeorico();
+
+        if (!rodando) {
+            tempoAtual = 0;
+            document.getElementById("txt-tempo").innerText = "0.00";
+            desenharCenario(0);
+        }
+    }
+
+    function alternarControles() {
+        const tipo1 = document.getElementById("tipo1").value;
+        const tipo2 = document.getElementById("tipo2").value;
+
+        document.getElementById("grupo-a1").classList.toggle("escondido", tipo1 === "MU");
+        document.getElementById("grupo-a2").classList.toggle("escondido", tipo2 === "MU");
+        
+        atualizarValores();
+    }
+
+    function calcularPosicao(tipo, s0, v0, a, t) {
+        if (tipo === "MU") {
+            return s0 + v0 * t;
+        } else {
+            return s0 + v0 * t + 0.5 * a * t * t;
+        }
+    }
+
+    function calcularVelocidade(tipo, v0, a, t) {
+        if (tipo === "MU") {
+            return v0;
+        } else {
+            return v0 + a * t;
+        }
+    }
+
+    function desenharCenario(tempoFoco) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const margemEsquerda = 50;
+        const larguraUtil = 650;
+
+        ctx.beginPath();
+        ctx.moveTo(margemEsquerda, 110);
+        ctx.lineTo(margemEsquerda + larguraUtil, 110);
+        ctx.strokeStyle = "#444";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = "#666";
+        ctx.font = "10px Arial";
+        for (let i = 0; i <= 200; i += 20) {
+            let xMarcacao = margemEsquerda + (i / 200) * larguraUtil;
+            ctx.fillRect(xMarcacao, 110, 2, 8);
+            ctx.fillText(`${i}m`, xMarcacao - 10, 132);
+        }
+
+        const tipo1 = document.getElementById("tipo1").value;
+        const s01 = parseFloat(document.getElementById("s01").value);
+        const v01 = parseFloat(document.getElementById("v01").value);
+        const a1 = (tipo1 === "MUV") ? parseFloat(document.getElementById("a1").value) : 0;
+
+        const tipo2 = document.getElementById("tipo2").value;
+        const s02 = parseFloat(document.getElementById("s02").value);
+        const v02 = parseFloat(document.getElementById("v02").value);
+        const a2 = (tipo2 === "MUV") ? parseFloat(document.getElementById("a2").value) : 0;
+
+        const posReal1 = calcularPosicao(tipo1, s01, v01, a1, tempoFoco);
+        const posReal2 = calcularPosicao(tipo2, s02, v02, a2, tempoFoco);
+
+        const x1 = margemEsquerda + (posReal1 / 200) * larguraUtil;
+        const x2 = margemEsquerda + (posReal2 / 200) * larguraUtil;
+
+        if (x1 >= (margemEsquerda - 15) && x1 <= (margemEsquerda + larguraUtil + 15)) {
+            ctx.fillStyle = "#0056b3";
+            ctx.fillRect(x1 - 15, 70, 30, 30);
+            ctx.fillStyle = "white";
+            ctx.font = "bold 12px Arial";
+            ctx.fillText("M1", x1 - 9, 90);
+        }
+
+        if (x2 >= (margemEsquerda - 15) && x2 <= (margemEsquerda + larguraUtil + 15)) {
+            ctx.fillStyle = "#cc0000";
+            ctx.fillRect(x2 - 15, 70, 30, 30);
+            ctx.fillStyle = "white";
+            ctx.font = "bold 12px Arial";
+            ctx.fillText("M2", x2 - 9, 90);
+        }
+
+        desenharEixosGrafico(ctxS, canvasS, "t (s)", "S (m)", 0, 200);
+        desenharEixosGrafico(ctxV, canvasV, "t (s)", "V (m/s)", -50, 50);
+
+        plotarCurva(ctxS, canvasS, tipo1, s01, v01, a1, tipo2, s02, v02, a2, tempoFoco, "S", 0, 200);
+        plotarCurva(ctxV, canvasV, tipo1, s01, v01, a1, tipo2, s02, v02, a2, tempoFoco, "V", -50, 50);
+    }
+
+    function desenharEixosGrafico(gCtx, gCanvas, labelX, labelY, minValY, maxValY) {
+        gCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
+        gCtx.strokeStyle = "#bbb";
+        gCtx.lineWidth = 1;
+
+        let zeroY = gCanvas.height - 30 - (-minValY / (maxValY - minValY)) * (gCanvas.height - 50);
+        
+        gCtx.beginPath();
+        gCtx.moveTo(40, zeroY);
+        gCtx.lineTo(gCanvas.width - 15, zeroY);
+        gCtx.stroke();
+
+        gCtx.beginPath();
+        gCtx.moveTo(40, 15);
+        gCtx.lineTo(40, gCanvas.height - 30);
+        gCtx.stroke();
+
+        gCtx.fillStyle = "#555";
+        gCtx.font = "10px Arial";
+        gCtx.fillText(labelX, gCanvas.width - 35, zeroY - 5);
+        gCtx.fillText(labelY, 45, 20);
+        
+        gCtx.fillText(maxValY, 12, 23);
+        gCtx.fillText(minValY, 12, gCanvas.height - 28);
+    }
+
+    function plotarCurva(gCtx, gCanvas, t1, s01, v01, a1, t2, s02, v02, a2, tLimite, tipoGrandeza, minY, maxY) {
+        const larguraUtil = gCanvas.width - 55;
+        const alturaUtil = gCanvas.height - 50;
+
+        if (tLimite === 0) return;
+
+        gCtx.beginPath();
+        gCtx.strokeStyle = "#0056b3";
+        gCtx.lineWidth = 2.5;
+        for (let t = 0; t <= tLimite; t += 0.05) {
+            let val = (tipoGrandeza === "S") ? calcularPosicao(t1, s01, v01, a1, t) : calcularVelocidade(t1, v01, a1, t);
+            let xPixel = 40 + (t / tMax) * larguraUtil;
+            let yPixel = (gCanvas.height - 30) - ((val - minY) / (maxY - minY)) * alturaUtil;
+            
+            if (t === 0) gCtx.moveTo(xPixel, yPixel);
+            else gCtx.lineTo(xPixel, yPixel);
+        }
+        gCtx.stroke();
+
+        gCtx.beginPath();
+        gCtx.strokeStyle = "#cc0000";
+        gCtx.lineWidth = 2.5;
+        for (let t = 0; t <= tLimite; t += 0.05) {
+            let val = (tipoGrandeza === "S") ? calcularPosicao(t2, s02, v02, a2, t) : calcularVelocidade(t2, v02, a2, t);
+            let xPixel = 40 + (t / tMax) * larguraUtil;
+            let yPixel = (gCanvas.height - 30) - ((val - minY) / (maxY - minY)) * alturaUtil;
+            
+            if (t === 0) gCtx.moveTo(xPixel, yPixel);
+            else gCtx.lineTo(xPixel, yPixel);
+        }
+        gCtx.stroke();
+
+        // MARCAÇÃO DO PONTO DE ENCONTRO NO GRAFICO ESPAÇO x TEMPO
+        if (tipoGrandeza === "S" && temposEncontroGlobais.length > 0) {
+            temposEncontroGlobais.forEach(function(t_enc) {
+                if (t_enc <= tLimite) {
+                    let s_enc = calcularPosicao(t1, s01, v01, a1, t_enc);
+                    let px = 40 + (t_enc / tMax) * larguraUtil;
+                    let py = (gCanvas.height - 30) - ((s_enc - minY) / (maxY - minY)) * alturaUtil;
+
+                    gCtx.beginPath();
+                    gCtx.arc(px, py, 5, 0, 2 * Math.PI);
+                    gCtx.fillStyle = "#28a745"; 
+                    gCtx.fill();
+                    gCtx.lineWidth = 2;
+                    gCtx.strokeStyle = "#ffffff";
+                    gCtx.stroke();
+
+                    gCtx.fillStyle = "#28a745";
+                    gCtx.font = "bold 10px Arial";
+                    gCtx.fillText(t_enc.toFixed(2) + "s", px + 8, py + 2);
+                }
+            });
+        }
+    }
+
+    function atualizarAnimacao() {
+        if (!rodando) return;
+
+        if (tempoAtual >= tMax) {
+            pararAnimacao();
+            return;
+        }
+
+        tempoAtual += 0.02;
+        document.getElementById("txt-tempo").innerText = tempoAtual.toFixed(2);
+        desenharCenario(tempoAtual);
+
+        animacaoId = requestAnimationFrame(atualizarAnimacao);
+    }
+
+    function iniciarAnimacao() {
+        if (rodando) {
+            pararAnimacao();
+        } else {
+            rodando = true;
+            tempoAtual = 0;
+            document.getElementById("btn-animar").innerText = "⏹ Parar Animação";
+            atualizarAnimacao();
+        }
+    }
+
+    function pararAnimacao() {
+        rodando = false;
+        if (animacaoId) {
+            cancelAnimationFrame(animacaoId);
+        }
+        document.getElementById("btn-animar").innerText = "▶ Iniciar Animação";
+    }
+
+    function verificarEncontroTeorico() {
+        const tipo1 = document.getElementById("tipo1").value;
+        const s01 = parseFloat(document.getElementById("s01").value);
+        const v01 = parseFloat(document.getElementById("v01").value);
+        const a1 = (tipo1 === "MUV") ? parseFloat(document.getElementById("a1").value) : 0;
+
+        const tipo2 = document.getElementById("tipo2").value;
+        const s02 = parseFloat(document.getElementById("s02").value);
+        const v02 = parseFloat(document.getElementById("v02").value);
+        const a2 = (tipo2 === "MUV") ? parseFloat(document.getElementById("a2").value) : 0;
+
+        const A = 0.5 * (a1 - a2);
+        const B = v01 - v02;
+        const C = s01 - s02;
+
+        temposEncontroGlobais = [];
+
+        if (Math.abs(A) < 0.0001) {
+            if (Math.abs(B) > 0.0001) {
+                let t = -C / B;
+                if (t >= 0 && t <= tMax) {
+                    temposEncontroGlobais.push(t);
+                }
+            }
+        } else {
+            let delta = (B * B) - (4 * A * C);
+            if (delta >= 0) {
+                let r1 = (-B + Math.sqrt(delta)) / (2 * A);
+                let r2 = (-B - Math.sqrt(delta)) / (2 * A);
+
+                if (r1 >= 0 && r1 <= tMax) temposEncontroGlobais.push(r1);
+                if (r2 >= 0 && r2 <= tMax) temposEncontroGlobais.push(r2);
+                
+                temposEncontroGlobais.sort((x, y) => x - y);
+
+                if (temposEncontroGlobais.length === 2 && Math.abs(temposEncontroGlobais[0] - temposEncontroGlobais[1]) < 0.01) {
+                    temposEncontroGlobais.pop();
+                }
+            }
+        }
+
+        const container = document.getElementById("container-encontro");
+
+        if (temposEncontroGlobais.length === 0) {
+            container.innerText = "Não se encontram em até " + tMax + "s";
+            container.style.backgroundColor = "#f8d7da"; 
+            container.style.borderColor = "#f5c6cb";
+        } else {
+            container.style.backgroundColor = "#e2f0d9"; 
+            container.style.borderColor = "#b5d59c";
+            
+            let txt = "";
+            temposEncontroGlobais.forEach((t_enc, idx) => {
+                let pos = calcularPosicao(tipo1, s01, v01, a1, t_enc);
+                txt += `Encontro ${idx + 1}: t = <span style="color:#cc0000">${t_enc.toFixed(2)}s</span> | S = <span style="color:#0056b3">${pos.toFixed(1)}m</span>`;
+                if (idx < temposEncontroGlobais.length - 1) txt += " <br> ";
+            });
+            container.innerHTML = txt;
+        }
+    }
+
+    window.onload = function() {
+        alternarControles();
+    };
+</script>
+
+</body>
+</html>
